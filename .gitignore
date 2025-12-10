@@ -1,0 +1,10 @@
+node_modules/
+.idea/
+dist/
+build/
+.npmrc
+coverage/
+.DS_Store
+*.log
+volumes/
+logs/

@@ -1,0 +1,14 @@
+FROM node:22.20.0
+COPY . /codes
+WORKDIR /codes
+
+RUN mv .env.production .env
+
+ENV TZ=Asia/Shanghai
+ENV PORT=3000
+ENV NODE_ENV=production
+ENV PATH="$PATH:/codes/node_modules/.bin"
+
+RUN sh scripts/build-in-docker.sh
+
+CMD ["node", "--enable-source-maps", "--stack-trace-limit=50", "src/web.js"]

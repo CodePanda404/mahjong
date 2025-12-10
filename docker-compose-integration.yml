@@ -1,0 +1,13 @@
+services:
+  migration:
+    image: tutorials-api:integration
+    command: prisma migrate deploy
+  api:
+    image: tutorials-api:integration
+    restart: always
+    ports:
+      - 3000:3000
+  cron:
+    image: tutorials-api:integration
+    command: aomex cron:start
+    restart: always

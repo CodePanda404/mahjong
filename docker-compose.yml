@@ -1,0 +1,25 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: 'abcde'
+      # 修改后需要同步修改.env里的参数
+      MYSQL_DATABASE: 'tutorials-api'
+    volumes:
+      - ./volumes/mysql:/var/lib/mysql
+    ports:
+      - 3306:3306
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test:
+        ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:8.0
+    volumes:
+      - ./volumes/redis:/data
+    ports:
+      - 6379:6379
+    command: --requirepass abcde

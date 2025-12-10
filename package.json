@@ -1,0 +1,68 @@
+{
+  "name": "mahjong-tutorials-api",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": "22.20.0"
+  },
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "cron:stats": "sh scripts/docker-cron-stats.sh",
+    "cron:stop": "sh scripts/docker-stop-cron.sh",
+    "deploy:production": "sh scripts/deploy.sh production",
+    "deploy:api": "sh scripts/deploy-api.sh production",
+    "deploy:cron": "sh scripts/deploy-cron.sh production",
+    "deploy:integration": "sh scripts/deploy.sh integration",
+    "prepare": "npx husky",
+    "preinstall": "npx only-allow pnpm"
+  },
+  "packageManager": "pnpm@10.18.3",
+  "volta": {
+    "node": "22.20.0",
+    "pnpm": "10.18.3"
+  },
+  "dependencies": {
+    "@aomex/async-trace": "^3.29.2",
+    "@aomex/auth": "^3.29.2",
+    "@aomex/auth-bearer-strategy": "^3.29.2",
+    "@aomex/auth-jwt-strategy": "^3.29.2",
+    "@aomex/cache": "^3.29.2",
+    "@aomex/cache-redis-adapter": "^3.29.2",
+    "@aomex/common": "^3.29.2",
+    "@aomex/compress": "^3.29.2",
+    "@aomex/console": "^3.29.2",
+    "@aomex/cors": "^3.29.2",
+    "@aomex/cron": "^3.29.2",
+    "@aomex/etag": "^3.29.2",
+    "@aomex/helmet": "^3.29.2",
+    "@aomex/http-logger": "^3.29.2",
+    "@aomex/logger": "^3.29.2",
+    "@aomex/openapi": "^3.29.2",
+    "@aomex/prisma": "^3.29.2",
+    "@aomex/response-time": "^3.29.2",
+    "@aomex/swagger-ui": "^3.29.2",
+    "@aomex/web": "^3.29.2",
+    "@prisma/client": "^6.17.1",
+    "ali-oss": "^6.23.0",
+    "axios": "^1.13.2",
+    "dayjs": "^1.11.19",
+    "ioredis": "^5.8.1",
+    "multer": "^2.0.2",
+    "prisma": "^6.17.1",
+    "wechatpay-node-v3": "^2.2.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@tsconfig/node22": "^22.0.2",
+    "@types/ali-oss": "^6.16.11",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.8.1",
+    "husky": "^9.1.7",
+    "prettier": "^3.6.2",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

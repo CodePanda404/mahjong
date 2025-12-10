@@ -1,0 +1,506 @@
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+generator aomex {
+  provider = "aomex-prisma"
+}
+
+/// 菜单表
+model menu {
+  id Int @id @default(autoincrement())
+  /// 菜单名称
+  name String @unique
+  /// 菜单类型 0-更多精彩 1-更多服务
+  type Int @default(0)
+  /// 菜单图片URL
+  imageUrl String @db.VarChar(500) @map("image_url")
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  @@map("menu")
+}
+
+/// 管理员表
+model admin {
+  id Int @id @default(autoincrement())
+  nickname String @unique
+  /// md5(turbos + pwd)
+  password String
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  // 提现记录
+  withDrawRecords user_withdraw_record[]
+}
+
+//  -----------------------用户相关信息表------------------------
+/// 用户信息表
+model user {
+  /// 用户id
+  id Int @id @default(autoincrement())
+  /// 用户昵称
+  nickname String @db.VarChar(50)
+  /// 用户头像地址
+  avatarUrl String @db.VarChar(255) @map("avatar_url")
+  /// 用户手机号
+  phone String @db.VarChar(50)
+  /// 用户身份id（不同平台下不一样）
+  openid String @unique @db.VarChar(255)  @map("open_id")
+  /// 用户公共身份id
+  unionid String? @db.VarChar(255) @map("union_id")
+  /// 用户角色类型（0-普通用户 1-会员用户）
+  role Int @default(0)
+  /// 是否启用 (1-可用、0-已注销)
+  enabled Boolean @default(true)
+  /// 最后登录时间
+  lastLoginAt DateTime? @db.DateTime(0) @map("last_login_at")
+  /// 推广者标志 (1-推广者、0-非推广者)
+  isPromoter Boolean @default(false) @map("is_promoter")
+  /// 佣金比例 (decimal(5,4) 支持 0.0000 到 0.9999)
+  commissionRate Decimal @db.Decimal(5, 4) @default(0.1) @map("commission_rate")
+  /// 推广链接
+  link String? @db.VarChar(255) @map("link")
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  // 关联关系定义
+  // 余额
+  balance user_balance?
+  // 会员
+  vipInfo user_vip?
+  // 提现记录
+  withDrawRecords user_withdraw_record[]
+  // 订单记录
+  orders member_order[]
+  // 激活码
+  activationCodes vip_activation_code[]
+  // 推广记录
+  promotion promotion_record[]
+  // 麻将练习记录
+  tutorialRecords user_tutorial_record[]
+  @@index([nickname])
+  @@map("users")
+}
+
+/// 推广记录表
+model promotion_record {
+  id Int @id @default(autoincrement())
+  /// 推广者ID
+  promoterId Int @map("promoter_id")
+  /// 被邀请用户ID
+  invitedUserId Int @map("invited_user_id")
+  /// 关联订单编号
+  orderNo String? @map("order_no")
+  /// 佣金金额
+  commissionAmount Decimal? @db.Decimal(10,4) @map("commission_amount")
+  /// 当时佣金比例
+  commissionRate Decimal? @db.Decimal(10,4) @map("commission_rate")
+  /// 用户购买时间
+  purchaseTime DateTime? @db.DateTime(0) @map("purchase_time")
+  /// 状态：1-已购买 2-已结算
+  status Int @default(0)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  // 关联关系
+  user user @relation(fields: [promoterId], references: [id])
+  @@index([promoterId])
+  @@index([invitedUserId])
+  @@index([status])
+  @@index([purchaseTime])
+  @@map("promotion_records")
+}
+
+/// 用户余额表
+model user_balance {
+  /// 主键id
+  id Int @id @default(autoincrement())
+  /// 用户id
+  userId Int @unique @map("user_id")
+  /// 当前可用余额
+  currentBalance Decimal @db.Decimal(10,4) @default(0) @map("current_balance")
+  /// 冻结余额（提现审核中未处理的金额）
+  frozenBalance Decimal @db.Decimal(10,4) @default(0) @map("frozen_balance")
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  // 关联关系
+  user user @relation(fields: [userId], references: [id])
+}
+
+/// 会员表
+model user_vip {
+  id Int @id @default(autoincrement())
+  /// 会员用户id
+  userId Int @unique @map("user_id")
+  /// 状态 1-正常 0-失效
+  status Int @default(1)
+  /// 会员等级 1-普通会员（练习题） 2-高级会员（习题教程口诀三合一）
+  level Int
+  /// 开通方式 pay-微信充值 code-激活码 link-链接
+  openType String @db.VarChar(20) @map("open_type")
+  /// 关联订单号
+  orderNo String? @db.VarChar(255) @map("order_no")
+  /// 关联会员产品id
+  productId Int? @map("product_id")
+  /// 开通时间
+  openAt DateTime @default(now()) @db.DateTime(0) @map("open_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  // 关联关系
+  user user @relation(fields: [userId], references: [id])
+  @@index([openAt])
+}
+
+
+/// 用户提现记录表
+model user_withdraw_record {
+  /// 主键id
+  id Int @id @default(autoincrement())
+  /// 用户id
+  userId Int @map("user_id")
+  /// 提现金额
+  amount Decimal @db.Decimal(10,4)
+  /// 微信收款码 URL
+  wechatQrcode String @db.VarChar(255) @map("wechatQrcode")
+  /// 提现状态 0-未处理 1-已处理 2-已拒绝
+  status Int @default(0)
+  /// 处理人 id
+  adminId Int @map("admin_id")
+  /// 处理时间
+  handleAt DateTime? @db.DateTime(0) @map("handle_at")
+  /// 拒绝原因
+  rejectReason String? @db.VarChar(255) @map("reject_reason")
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  // 关联关系
+  user user @relation(fields: [userId], references: [id])
+  admin admin @relation(fields: [adminId], references: [id])
+  @@index([userId])
+  @@index([status])
+  @@map("user_withdraw_records")
+}
+
+//  -----------------------麻将拆塔练习------------------------
+/// 麻将拆搭练习题目
+/// w=万, t=条, b=筒, z=红中
+model mahjong_tutorial {
+  id Int @id @default(autoincrement())
+  /// 分类key，例如：HZCDLX(红中拆搭练习)、CMCDLX(川麻拆搭练习)等
+  category String @db.VarChar(50)
+  /// 第一组手牌，例如：1w;3w;4w;1b;3b;5b;6b;
+  first String @db.VarChar(500)
+  /// 第二组手牌，例如：z;z;9t;9t;8t;7t;3t;
+  second String @db.VarChar(500)
+  /// 选项列表，JSON格式存储
+  options String @db.Text
+  /// 正确答案，例如：3t;
+  answer String @db.VarChar(50)
+  /// 解析说明
+  note String @db.Text
+  /// 题目序号
+  orderNum Int @default(0) @map("order_num")
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  categories mahjong_tutorial_category @relation(fields: [category], references: [code])
+
+  @@index([category, enabled, orderNum])
+  @@map("mahjong_tutorials")
+}
+
+/// 麻将拆塔练习题目分类
+model mahjong_tutorial_category {
+  id Int @id @default(autoincrement())
+  /// 分类 code，例如：HZCDLX(红中拆塔练习)、SCMJ(四川麻将)等
+  code String @unique @db.VarChar(50)
+  /// 分类名 name，例如：红中拆塔练习、四川麻将等
+  name String @db.VarChar(50)
+  /// 免费关卡数
+  freeLevel Int? @map("free_level")
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  tutorials mahjong_tutorial[]
+}
+
+/// 用户练习题记录表
+model user_tutorial_record {
+  id Int @id @default(autoincrement())
+  /// 用户id
+  userId Int @map("user_id")
+  /// 麻将题目分类code
+  category String @map("category")
+  /// 当前所在关卡
+  currentLevel Int @map("current_level")
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  // 关联
+  user user @relation(fields: [userId], references: [id])
+
+  @@index([userId, category])
+  @@map("user_tutorial_records")
+}
+
+//  -----------------------麻将电子书------------------------
+/// 麻将电子书分类表
+model mahjong_ebook_category {
+  id Int @id @default(autoincrement())
+  /// 分类 code，例如：MJ72Z(麻将三十六计)、MJJCKJ(基础口诀)等
+  code String @unique @db.VarChar(50)
+  /// 分类名 name，例如：MJ72Z(麻将三十六计)、MJJCKJ(基础口诀)等
+  name String @db.VarChar(50)
+  /// 图片URL
+  imageUrl String @db.VarChar(500) @map("image_url")
+  /// 免费页数
+  freePage Int @default(3) @map("free_page")
+  /// 图片序号
+  orderNum Int @default(0) @map("order_num")
+  /// 是否启用
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  books mahjong_ebook[]
+}
+
+/// 麻将电子书表
+model mahjong_ebook {
+  id Int @id @default(autoincrement())
+  /// 分类key，例如：MJ72Z(麻将三十六计)、MJJCKJ(基础口诀)等
+  category String @db.VarChar(50)
+  /// 图片URL
+  imageUrl String @db.VarChar(500) @map("image_url")
+  /// 图片序号
+  orderNum Int @default(0) @map("order_num")
+  /// 是否启用
+  enabled    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  @@index([category, enabled, orderNum])
+  @@map("mahjong_ebooks")
+
+  categories mahjong_ebook_category @relation(fields: [category], references: [code])
+}
+
+//  -----------------------私教视频教程------------------------
+/// 私教视频教程分类
+model mahjong_video_tutorial_category {
+  id Int @id @default(autoincrement())
+  /// 分类 code
+  code String @unique @db.VarChar(50)
+  /// 分类名 name
+  name String @db.VarChar(50)
+  /// 图片 URL
+  imageUrl String @db.VarChar(500) @map("image_url")
+  /// 图片序号
+  orderNum Int @default(0) @map("order_num")
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  videos mahjong_video_tutorial[]
+}
+
+/// 私教视频教程列表
+model mahjong_video_tutorial {
+  id Int @id @default(autoincrement())
+  title String @unique @db.VarChar(50)
+  /// 分类key
+  category String @db.VarChar(50)
+  /// 图片 URL
+  imageUrl String @db.VarChar(500) @map("image_url")
+  /// 视频 URL
+  videoUrl String @db.VarChar(500) @map("video_url")
+  /// 是否免费
+  isFree Boolean @default(true) @map("is_free")
+  /// 排序
+  orderNum Int @default(999) @map("order_num")
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  @@index([category, enabled])
+  @@index([orderNum])
+  @@map("mahjong_video_tutorials")
+  categories mahjong_video_tutorial_category @relation(fields: [category], references: [code])
+}
+
+//  -----------------------图文教程------------------------
+/// 图文教程列表
+model mahjong_article_tutorial {
+  id Int @id @default(autoincrement())
+  title String @db.VarChar(50)
+  /// 教程编码
+  code String @unique @db.VarChar(50)
+  /// 图片URL
+  imageUrl String @db.VarChar(500) @map("image_url")
+  /// 免费页数
+  freePage Int @default(3) @map("free_page")
+  /// 图片序号
+  orderNum Int @default(999) @map("order_num")
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  @@index([code, enabled])
+  @@index([orderNum])
+  @@map("mahjong_article_tutorials")
+
+  detail mahjong_article_tutorial_detail[]
+}
+/// 图文教程详情
+model mahjong_article_tutorial_detail {
+  id Int @id @default(autoincrement())
+  /// 教程key
+  code String @db.VarChar(50)
+  /// 图片 URL
+  imageUrl String @db.VarChar(500) @map("image_url")
+  /// 图片序号
+  orderNum Int @default(0) @map("order_num")
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  @@index([code, enabled, orderNum])
+
+  articles mahjong_article_tutorial @relation(fields: [code], references: [code])
+}
+
+//  -----------------------麻将日历------------------------
+/// 麻将万象日历
+model mahjong_calendar {
+  id Int @id @default(autoincrement())
+  /// 日期，格式：2025-10-20
+  date String @unique @db.VarChar(20)
+  /// 农历日期，例如：农历八月廿九
+  lunarDate String @db.VarChar(50) @map("lunar_date")
+  /// 庄位/方位，JSON数组，例如：["西(曹宝)","南(陈九公)"]
+  positions String @db.Text
+  /// 颜色，JSON数组，例如：["咖色","黄色","褐色"]
+  colors String  @db.Text
+  /// 生肖颜色，JSON数组，12个元素(鼠牛虎兔龙蛇马羊猴鸡狗猪)，例如：["G","R","B",...]
+  /// G=绿色, R=红色, B=黑色
+  zodiacColors String @db.Text @map("zodiac_colors")
+  /// 运势标记，JSON数组，12个元素，例如：["","","X","","","Z",...]
+  /// X=刑, Z=值, P=破, C=冲
+  fortuneMarks String @db.Text @map("fortune_marks")
+  /// 时辰颜色，JSON数组，12个元素(子丑寅卯辰巳午未申酉戌亥)，例如：["J","J","X",...]
+  /// J=吉, X=凶, Z=中
+  hourColors String @db.Text @map("hour_colors")
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  @@index([date, enabled])
+  @@map("mahjong_calendars")
+}
+
+// -----------------------营销相关------------------------
+
+/// 会员产品表
+model member_product {
+  id Int @id @default(autoincrement())
+  /// 产品编号
+  code String @unique @db.VarChar(20)
+  /// 产品名称
+  name String @db.VarChar(100)
+  /// 会员价格
+  price Decimal @db.Decimal(10, 2)
+  /// 产品介绍
+  description String @db.VarChar(255)
+  /// 会员等级 1-普通会员（练习题） 2-高级会员（习题教程口诀三合一）
+  level Int
+  /// 是否启用
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+
+  Order member_order[]
+  vipCode vip_activation_code[]
+}
+
+/// 激活码
+model vip_activation_code {
+  id Int @id @default(autoincrement())
+  /// 激活码（唯一，12位随机字符串）
+  code String @unique @db.VarChar(50)
+  /// 绑定的会员产品id
+  productId Int
+  /// 激活用户id
+  userId Int? @map("user_id")
+  /// 状态 0-未激活 1-已激活 2-已失效
+  status Int @default(0)
+  /// 激活时间
+  activatedAt DateTime? @map("activated_at")
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  // 关联关系
+  user user? @relation(fields: [userId], references: [id])
+  product member_product? @relation(fields: [productId], references: [id])
+  @@index([createdAt])
+  @@index([status])
+}
+
+/// 订单表
+model member_order {
+  id Int @id @default(autoincrement())
+  /// 订单编号（唯一）
+  orderNo String @unique @db.VarChar(255) @map("order_no")
+  /// 用户id
+  userId Int @map("user_id")
+  /// 产品 id
+  productId Int @map("product_id")
+  /// 产品名称
+  productName String? @db.VarChar(100) @map("product_name")
+  /// 支付金额
+  payAmount Decimal @db.Decimal(10, 2) @map("pay_amount")
+  /// 支付状态（SUCCESS-支付成功 REFUND-转入退款 NOTPAY-未支付 CLOSE-已关闭）
+  payStatus String @db.VarChar(20) @default("NOTPAY") @map("pay_status")
+  /// 支付方式 JSAPI => 公众号支付、小程序支付
+  payType String? @db.VarChar(20) @map("pay_type")
+  /// 商户号id
+  mchid String? @db.VarChar(64)
+  /// 微信支付交易id（微信回调返回，唯一）
+  transactionId String? @unique @db.VarChar(64) @map("transaction_id")
+  /// 支付完成时间
+  payTime DateTime? @map("pay_time")
+  /// 订单取消时间
+  cancelTime DateTime? @map("cancel_time")
+  /// 微信支付异步回调原始数据（JSON格式）
+  wechatCallback String? @db.Text @map("wechat_callback")
+  /// 备注
+  remark String? @db.VarChar(255)
+  /// 订单更新人(-1表示系统)
+  updatedBy Int @default(-1) @map("updated_by")
+  /// 订单更新时间
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime(0) @map("updated_at")
+  /// 订单创建时间
+  createdAt DateTime @default(now()) @db.DateTime(0) @map("created_at")
+  /// 推广人id
+  promoterId Int? @map("promoter_id")
+  // 关联关系
+  user user? @relation(fields: [userId], references: [id])
+
+  product member_product? @relation(fields: [productId], references: [id])
+
+  @@index([userId])
+  @@index([productId])
+  @@index([payStatus])
+  @@index([createdAt])
+}
+

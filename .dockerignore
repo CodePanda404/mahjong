@@ -1,0 +1,7 @@
+volumes/
+node_modules/
+coverage/
+.git/
+.vscode/
+.husky/
+.idea/
