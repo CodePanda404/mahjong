@@ -1,13 +1,11 @@
 import { rule } from '@aomex/common';
 import { body, params, response, Router } from '@aomex/web';
-import { auth } from '@middleware/auth.md';
 import { services } from '@services';
 
 export const router = new Router({
   prefix: '/tutorial',
   mount: [
     // 以下接口均需要校验登录信息
-    auth.authenticate('user'),
   ],
 });
 
